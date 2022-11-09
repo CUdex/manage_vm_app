@@ -1,15 +1,14 @@
 import mysql.connector
 
-
 class MysqlController:
 
-
     def __init__(self, param):
-        self.db_connector = mysql_con = mysql.connector.connect(host=param['host'], port='3306', database=param['database'], user=param['user'], password=param['passwd'])
+        print(param)
+        self.db_connector = mysql_con = mysql.connector.connect(host=param['db_host'], port='3306', database=param['db_database'], user=param['db_user'], password=param['db_passwd'])
         self.cursor = self.db_connector.cursor(dictionary=True)
 
     def __del__(self):
-        self.cursor.close()
+        self.db_connector.close()
 
     def query_executor(self, query):
         self.cursor.execute(query)
