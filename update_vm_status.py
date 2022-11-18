@@ -8,7 +8,7 @@ import vm_utils
 #def all_vm_list(server_list):
 
 info = vm_utils.readAppInfo() 
-print(vm_utils.power_on_vm_list(info["server_ip"]))
+print(vm_utils.power_on_vm_list(info['server_ip']))
 
 
 
