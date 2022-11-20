@@ -1,14 +1,28 @@
 from mysql_lib import MysqlController
 import vm_utils
 
-# app_info = readAppInfo()
-# db_controller = MysqlController(app_info)
-# query = "select * from information_schema.schemata" #테스트용 쿼리
-# db_cursor = db_controller.query_executor(query)
-#def all_vm_list(server_list):
+def update_vm_idx():
+    vm_list = vm_utils.get_vm_id(info['server_ip'])
+    insert_query = "insert into view_vm_vm_list(vm_name, vm_idx, vm_host_server) values"
+    insert_data = []
+
+    for name, value in vm_list.items():
+        check_query = f"select 1 from view_vm_vm_list where vm_name = '{name}'"
+        if db_controller.query_executor(check_query):
+            query = f"update view_vm_vm_list set vm_idx = '{value[0]}', vm_host_server = '{value[1]}'"
+            db_controller.query_executor(query)
+        else:
+            insert_data.append(f"('{name}', '{value[0]}', '{value[1]}')")
+
+    if insert_data:
+        insert_query = insert_query + ",".join(insert_data)
+        db_controller.query_executor(insert_query)
+
+
 
 info = vm_utils.readAppInfo() 
-print(vm_utils.power_on_vm_list(info['server_ip']))
+db_controller = MysqlController(info)
 
 
+        
 
