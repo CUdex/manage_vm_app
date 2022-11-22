@@ -9,7 +9,7 @@ def update_vm_idx():
     for name, value in vm_list.items():
         check_query = f"select 1 from view_vm_vm_list where vm_name = '{name}'"
         if db_controller.query_executor(check_query):
-            query = f"update view_vm_vm_list set vm_idx = '{value[0]}', vm_host_server = '{value[1]}'"
+            query = f"update view_vm_vm_list set vm_idx = '{value[0]}', vm_host_server = '{value[1]}' where vm_name = '{name}'"
             db_controller.query_executor(query)
         else:
             insert_data.append(f"('{name}', '{value[0]}', '{value[1]}')")
@@ -22,6 +22,7 @@ def update_vm_idx():
 
 info = vm_utils.readAppInfo() 
 db_controller = MysqlController(info)
+update_vm_idx()
 
 
         
