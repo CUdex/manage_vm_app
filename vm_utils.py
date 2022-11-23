@@ -37,8 +37,8 @@ def power_on_vm_list(server_list) -> list:
     list = []
 
     for server in server_list:
-        test = subprocess.check_output("ssh root@%s esxcli vm process list | grep \"Display Name\" | awk -F': ' '{print $2}'" % server, shell=True).decode('utf-8')
-        list += test.split('\n')
+        vm_list = subprocess.check_output("ssh root@%s esxcli vm process list | grep \"Display Name\" | awk -F': ' '{print $2}'" % server, shell=True).decode('utf-8')
+        list += vm_list.split('\n')
         list.remove('')
     
     return list
@@ -49,11 +49,20 @@ def vm_status(vm_id, server_ip):
     """
     print(vm_id)
 
-def vm_server_status(server_ip):
+def vm_server_status(server_list):
     """
     vm 서버의 자원 사용량을 체크하기 위한 함수
     """
-    print(server_ip)
+    server_resource = {}
+
+    for server in server_list:
+        ssh_server = "ssh root@{} ".format(server)
+        cpu_percentage = subprocess.check_output(ssh_server + "esxtop -n1 -b | awk -F',' '{print $6}' | tail -n 1 | sed 's/\"//g' | awk '{printf \"%d\", $1 * 100}'", shell=True).decode('utf-8')
+        memory_percentage = subprocess.check_output(ssh_server + "vsish -e get /memory/comprehensive | grep -E \"Physical|Free\" | sed 's/ KB//g' | awk -F':' '{arr[i++]=$2} END {printf \"%d\", ((arr[0] - arr[1]) / arr[0] + 0.005) * 100}'", shell=True).decode('utf-8')
+        disk_percentage = subprocess.check_output(ssh_server + "df | grep VMFS | awk '{max+=$2; use+=$3} END {printf \"%d\", (use / max + 0.005) * 100}'", shell=True).decode('utf-8')
+
+        server_resource[server] = {"cpu_percentage": cpu_percentage, "memory_percentage": memory_percentage, "disk_percentage": disk_percentage}
+    return server_resource
 
 def get_vm_id(server_list):
     """
