@@ -47,7 +47,17 @@ def vm_status(vm_id, server_ip):
     """
     vm의 status를 가져오는 함수로 여기서 vmid라는 vm 식별자를 통해 vm 정보를 조회하고 해당 자원 사용량 power 상태 등을 체크 가능 
     """
-    print(vm_id)
+    result_resource = {}
+    connect_server = "ssh root@{} ".format(server_ip)
+    cli_command = "vim-cmd vmsvc/get.summary {} | grep -i -E 'uptimeseconds|overallcpuusage|committed|hostmemoryusage' | grep -iv uncommitted | sed -E 's/,| //g'".format(vm_id)
+    result_usage = subprocess.check_output(connect_server + cli_command, shell=True).decode('utf-8')
+    result_usage = result_usage.splitlines()
+
+    for usage in result_usage:
+        split_usage = usage.split('=')
+        result_resource[split_usage[0]] = split_usage[1]
+
+    return result_resource
 
 def vm_server_status(server_list):
     """

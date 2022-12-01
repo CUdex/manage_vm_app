@@ -18,6 +18,10 @@ def update_vm_idx():
         insert_query = insert_query + ",".join(insert_data)
         db_controller.query_executor(insert_query)
 
+def update_server_info(server_list):
+    server_status = vm_utils.vm_server_status(server_list)
+    print(0)
+
 
 
 info = vm_utils.readAppInfo() 

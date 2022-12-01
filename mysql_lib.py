@@ -17,11 +17,17 @@ class MysqlController:
         
         if query[0] == 's':
             result = cursor.fetchall()
+            cursor.close()
             return result
 
         self.db_connector.commit()
+        cursor.close()
         
 
     #DB 미존재 시 MANAGE_VM DB 생성
     def db_init(self):
+        cursor = self.db_connector.cursor(dictionary=True)
         query = "CREATE DATABASE IF NOT EXISTS MANAGE_VM;"
+        cursor.execute(query)
+        cursor.close()
+        
