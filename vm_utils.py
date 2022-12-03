@@ -1,33 +1,4 @@
-import re
 import subprocess
-
-#app.conf 파일에 있는 db정보를 가져오는 함수
-def readAppInfo(want = 'all') -> dict:
-    """
-    app.conf 파일에서 필요한 정보를 딕셔너리 형태로 반환하는 함수, want parameter를 통해 db, server_ip 두개 중 원하는 정보만 가져올 수 있음
-    """
-    app_info = {}
-    #정규식을 이용하여 필요한 정보만 dictionary array에 저장하기 위해 정규식 설정
-    db_match = re.compile('^db')
-    server_match = re.compile('^server')
-    f = open('/etc/app.conf')
-    readText = f.readlines()
-    f.close()
-
-    for line in readText:
-        #원하는 정보만 딕셔너리로 리턴
-        if db_match.match(line) and (want == 'db' or want == 'all'):
-            split_text = line.split("=")
-            app_info[split_text[0]] = split_text[1].strip('\n')
-
-        elif server_match.match(line) and (want == 'server_ip' or want == 'all'):
-            split_text = line.split("=")
-            server_ip = split_text[1].split(",")
-            app_info[split_text[0]] = server_ip
-            app_info[split_text[0]][-1] = app_info[split_text[0]][-1].strip('\n')
-
-    
-    return app_info
 
 # process list를 조회하여 power on 상태의 vm list 조회
 def power_on_vm_list(server_list) -> list:
@@ -43,7 +14,7 @@ def power_on_vm_list(server_list) -> list:
     
     return list
 
-def vm_status(vm_id, server_ip):
+def vm_status(vm_id, server_ip) -> dict:
     """
     vm의 status를 가져오는 함수로 여기서 vmid라는 vm 식별자를 통해 vm 정보를 조회하고 해당 자원 사용량 power 상태 등을 체크 가능 
     """
@@ -55,6 +26,9 @@ def vm_status(vm_id, server_ip):
 
     for usage in result_usage:
         split_usage = usage.split('=')
+        if split_usage[1] == '<unset>':
+            split_usage[1] = '0'
+        
         result_resource[split_usage[0]] = split_usage[1]
 
     return result_resource
@@ -90,3 +64,6 @@ def get_vm_id(server_list):
             vm_list_dict[vm_index_name[1]] = [vm_index_name[0], server]
 
     return vm_list_dict
+
+def vm_stop(vm_idx, host_server):
+    subprocess.run(f"ssh root@{host_server} vim-cmd vmsvc/power.off {vm_idx}",shell=True)
