@@ -98,7 +98,6 @@ def auto_stop(ignore_vm, limit_boot_time):
 
     query = query + ignore_list
     stop_list = db_controller.query_executor(query)
-    print(stop_list)
 
     for vm in stop_list:
         vm_utils.vm_stop(vm['vm_idx'], vm['vm_host_server'])
