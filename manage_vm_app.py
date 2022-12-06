@@ -78,13 +78,17 @@ def update_vm_status():
 
     for vm in vm_list:
         vm_status = vm_utils.vm_status(vm['vm_idx'], vm['vm_host_server'])
-        #쿼리문 powerd의 경우 1이 on을 의미한다.
-        query = f"""update vm_list set vm_use_memory = {int(vm_status['hostMemoryUsage']) / 1024}, 
-        vm_use_cpu = {vm_status['overallCpuUsage']}, 
-        vm_use_disk = {int(vm_status['committed']) / 1073741824}, 
-        vm_boot_time = {vm_status['uptimeSeconds']},
-        vm_powered = {0 if vm_status['uptimeSeconds'] == '0' else 1} 
-        where vm_name = '{vm['vm_name']}'"""
+
+        if not vm_status:
+            query = f"delete from vm_list where vm_idx = '{vm['vm_idx']}' and vm_host_server = '{vm['vm_host_server']}'"
+        else:
+            #쿼리문 powerd의 경우 1이 on을 의미한다.
+            query = f"""update vm_list set vm_use_memory = {int(vm_status['hostMemoryUsage']) / 1024}, 
+            vm_use_cpu = {vm_status['overallCpuUsage']}, 
+            vm_use_disk = {int(vm_status['committed']) / 1073741824}, 
+            vm_boot_time = {vm_status['uptimeSeconds']},
+            vm_powered = {0 if vm_status['uptimeSeconds'] == '0' else 1} 
+            where vm_name = '{vm['vm_name']}'"""
 
         db_controller.query_executor(query)
     

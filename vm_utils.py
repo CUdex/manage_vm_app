@@ -24,6 +24,10 @@ def vm_status(vm_id, server_ip) -> dict:
     result_usage = subprocess.check_output(connect_server + cli_command, shell=True).decode('utf-8')
     result_usage = result_usage.splitlines()
 
+    #해당 vm이 조회되지 않으면 빈 dict 반환
+    if not result_usage:
+        return {}
+
     for usage in result_usage:
         split_usage = usage.split('=')
         if split_usage[1] == '<unset>':
