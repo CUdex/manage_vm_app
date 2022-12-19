@@ -30,8 +30,8 @@ def readAppInfo() -> dict:
 
     return app_info
 
-def update_vm_idx(server_list):
-    vm_list = vm_utils.get_vm_id(server_list)
+def update_vm_idx(server_list, server_pass):
+    vm_list = vm_utils.get_vm_id(server_list, server_pass)
     insert_query = "insert into vm_list(vm_name, vm_idx, vm_host_server) values"
     insert_data = []
 
@@ -51,8 +51,8 @@ def update_vm_idx(server_list):
         insert_query = insert_query + ",".join(insert_data)
         db_controller.query_executor(insert_query)
 
-def update_server_info(server_list):
-    server_status = vm_utils.vm_server_status(server_list)
+def update_server_info(server_list, server_pass):
+    server_status = vm_utils.vm_server_status(server_list, server_pass)
     insert_query = "insert into vm_server(server_ip, server_cpu_percentage, server_memory_percentage, server_disk_percentage) values"
     insert_data = []
 
@@ -72,12 +72,12 @@ def update_server_info(server_list):
         db_controller.query_executor(insert_query)
 
 #vm 상태 업데이트
-def update_vm_status():
+def update_vm_status(server_pass):
     query = "select vm_name, vm_idx, vm_host_server from vm_list"
     vm_list = db_controller.query_executor(query)
 
     for vm in vm_list:
-        vm_status = vm_utils.vm_status(vm['vm_idx'], vm['vm_host_server'])
+        vm_status = vm_utils.vm_status(vm['vm_idx'], vm['vm_host_server'], server_pass)
 
         if not vm_status:
             query = f"delete from vm_list where vm_idx = '{vm['vm_idx']}' and vm_host_server = '{vm['vm_host_server']}'"
@@ -93,7 +93,7 @@ def update_vm_status():
         db_controller.query_executor(query)
     
 #app.conf에 설정된 limit_boot_time을 초과한 vm 종료
-def auto_stop(ignore_vm, limit_boot_time):
+def auto_stop(ignore_vm, limit_boot_time, server_pass):
     query = f"select vm_name, vm_idx, vm_host_server from vm_list where vm_boot_time >= {limit_boot_time}"
 
     ignore_list = ""
@@ -104,16 +104,24 @@ def auto_stop(ignore_vm, limit_boot_time):
     stop_list = db_controller.query_executor(query)
 
     for vm in stop_list:
-        vm_utils.vm_stop(vm['vm_idx'], vm['vm_host_server'])
+        vm_utils.vm_stop(vm['vm_idx'], vm['vm_host_server'], server_pass)
 
 #main 시작 부분
 info = readAppInfo() 
 db_controller = MysqlController(info)
 
 while True:
-    update_server_info(info['server_ip'])
-    update_vm_idx(info['server_ip'])
-    update_vm_status()
-    auto_stop(info['ignore_vm'],info['limit_boot_time'])   
+    try:
+        update_server_info(info['server_ip'], info['server_pass'][0])
+        update_vm_idx(info['server_ip'], info['server_pass'][0])
+        update_vm_status(info['server_pass'][0])
+        auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'][0])  
+    except ConnectionError as e:
+        print(f"error: {e.args[0]}") 
+    # except Exception as e:
+    #     print(f"error: {e.args[0]}")
 
+    print("sleep start")
     time.sleep(180) 
+    print("sleep end")
+

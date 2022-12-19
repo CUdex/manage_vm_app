@@ -1,28 +1,35 @@
 import subprocess
 
 # process list를 조회하여 power on 상태의 vm list 조회
-def power_on_vm_list(server_list) -> list:
+def power_on_vm_list(server_list, server_pass) -> list:
     """
     esxi 서버의 esxcli vm process list 명령어를 통해 동작 중인 vm의 이름들을 가져옴
     """
     list = []
 
     for server in server_list:
-        vm_list = subprocess.check_output("ssh root@%s esxcli vm process list | grep \"Display Name\" | awk -F': ' '{print $2}'" % server, shell=True).decode('utf-8')
-        list += vm_list.split('\n')
-        list.remove('')
+        try:
+            connect_server = "sshpass -p{} ssh root@{} ".format(server_pass, server)
+            vm_list = subprocess.check_output(connect_server + "esxcli vm process list | grep \"Display Name\" | awk -F': ' '{print $2}'", shell=True).decode('utf-8')
+            list += vm_list.split('\n')
+            list.remove('')
+        except:
+            raise ConnectionError(f'vm server connect error, you might check vm server ip-{server} or password')
     
     return list
 
-def vm_status(vm_id, server_ip) -> dict:
+def vm_status(vm_id, server_ip, server_pass) -> dict:
     """
     vm의 status를 가져오는 함수로 여기서 vmid라는 vm 식별자를 통해 vm 정보를 조회하고 해당 자원 사용량 power 상태 등을 체크 가능 
     """
-    result_resource = {}
-    connect_server = "ssh root@{} ".format(server_ip)
-    cli_command = "vim-cmd vmsvc/get.summary {} | grep -i -E 'uptimeseconds|overallcpuusage|committed|hostmemoryusage' | grep -iv uncommitted | sed -E 's/,| //g'".format(vm_id)
-    result_usage = subprocess.check_output(connect_server + cli_command, shell=True).decode('utf-8')
-    result_usage = result_usage.splitlines()
+    try:
+        result_resource = {}
+        connect_server = "sshpass -p{} ssh root@{} ".format(server_pass, server_ip)
+        cli_command = "vim-cmd vmsvc/get.summary {} | grep -i -E 'uptimeseconds|overallcpuusage|committed|hostmemoryusage' | grep -iv uncommitted | sed -E 's/,| //g'".format(vm_id)
+        result_usage = subprocess.check_output(connect_server + cli_command, shell=True).decode('utf-8')
+        result_usage = result_usage.splitlines()
+    except:
+        raise ConnectionError(f'vm server connect error, you might check vm server ip-{server_ip} or password')
 
     #해당 vm이 조회되지 않으면 빈 dict 반환
     if not result_usage:
@@ -37,28 +44,34 @@ def vm_status(vm_id, server_ip) -> dict:
 
     return result_resource
 
-def vm_server_status(server_list):
+def vm_server_status(server_list, server_pass):
     """
     vm 서버의 자원 사용량을 체크하기 위한 함수
     """
     server_resource = {}
 
     for server in server_list:
-        ssh_server = "ssh root@{} ".format(server)
-        cpu_percentage = subprocess.check_output(ssh_server + "esxtop -n1 -b | awk -F',' '{print $6}' | tail -n 1 | sed 's/\"//g' | awk '{printf \"%d\", $1 * 100}'", shell=True).decode('utf-8')
-        memory_percentage = subprocess.check_output(ssh_server + "vsish -e get /memory/comprehensive | grep -E \"Physical|Free\" | sed 's/ KB//g' | awk -F':' '{arr[i++]=$2} END {printf \"%d\", ((arr[0] - arr[1]) / arr[0] + 0.005) * 100}'", shell=True).decode('utf-8')
-        disk_percentage = subprocess.check_output(ssh_server + "df | grep VMFS | awk '{max+=$2; use+=$3} END {printf \"%d\", (use / max + 0.005) * 100}'", shell=True).decode('utf-8')
+        try:
+            ssh_server = "sshpass -p{} ssh root@{} ".format(server_pass, server)
+            print(ssh_server)
+            cpu_percentage = subprocess.check_output(ssh_server + "esxtop -n1 -b | awk -F',' '{print $6}' | tail -n 1 | sed 's/\"//g' | awk '{printf \"%d\", $1 * 100}'", shell=True).decode('utf-8')
+            memory_percentage = subprocess.check_output(ssh_server + "vsish -e get /memory/comprehensive | grep -E \"Physical|Free\" | sed 's/ KB//g' | awk -F':' '{arr[i++]=$2} END {printf \"%d\", ((arr[0] - arr[1]) / arr[0] + 0.005) * 100}'", shell=True).decode('utf-8')
+            disk_percentage = subprocess.check_output(ssh_server + "df | grep VMFS | awk '{max+=$2; use+=$3} END {printf \"%d\", (use / max + 0.005) * 100}'", shell=True).decode('utf-8')
 
-        server_resource[server] = {"cpu_percentage": cpu_percentage, "memory_percentage": memory_percentage, "disk_percentage": disk_percentage}
+            server_resource[server] = {"cpu_percentage": cpu_percentage, "memory_percentage": memory_percentage, "disk_percentage": disk_percentage}
+        except:
+            raise ConnectionError(f'vm server connect error, you might check vm server ip-{server} or password')
+
     return server_resource
 
-def get_vm_id(server_list):
+def get_vm_id(server_list, server_pass):
     """
     vm index를 가져오는 함수
     """
     vm_list_dict = {}
     for server in server_list:
-        vm_list = subprocess.check_output("ssh root@%s vim-cmd vmsvc/getallvms | grep -v Vmid | awk '{print $1, $2}'" % server, shell=True).decode('utf-8')
+        ssh_server = "sshpass -p{} ssh root@{} ".format(server_pass, server)
+        vm_list = subprocess.check_output(ssh_server + "vim-cmd vmsvc/getallvms | grep -v Vmid | awk '{print $1, $2}'", shell=True).decode('utf-8')
         vm_list = vm_list.split('\n')
         vm_list.remove('')
 
@@ -69,5 +82,8 @@ def get_vm_id(server_list):
 
     return vm_list_dict
 
-def vm_stop(vm_idx, host_server):
-    subprocess.run(f"ssh root@{host_server} vim-cmd vmsvc/power.off {vm_idx}",shell=True)
+def vm_stop(vm_idx, host_server, server_pass):
+    try:
+        subprocess.run(f"sshpass -p{server_pass} ssh root@{host_server} vim-cmd vmsvc/power.off {vm_idx}",shell=True)
+    except:
+        raise ConnectionError(f'vm server connect error, you might check vm server ip-{host_server} or password')

@@ -5,8 +5,11 @@ class MysqlController:
     #인스턴스 생성 시 mysql connect 진행
     def __init__(self, param):
         self.db_init(param)
-        self.db_connector = mysql.connector.connect(host=param['db_host'], port='3306', database=param['db_database'], user=param['db_user'], password=param['db_passwd'])
-        self.db_create_table(self.db_connector)
+        try:
+            self.db_connector = mysql.connector.connect(host=param['db_host'], port='3306', database=param['db_database'], user=param['db_user'], password=param['db_passwd'])
+            self.db_create_table(self.db_connector)
+        except:
+            raise ConnectionError('DB connect error')
 
     def __del__(self):
         self.db_connector.close()
@@ -26,11 +29,14 @@ class MysqlController:
 
     #DB 미존재 시 MANAGE_VM DB 생성
     def db_init(self, param):
-        db_connector = mysql.connector.connect(host=param['db_host'], port='3306', user=param['db_user'], password=param['db_passwd'])
-        cursor = db_connector.cursor(dictionary=True)
-        query = f"CREATE DATABASE IF NOT EXISTS {param['db_database']};"
-        cursor.execute(query)
-        db_connector.close()
+        try:
+            db_connector = mysql.connector.connect(host=param['db_host'], port='3306', user=param['db_user'], password=param['db_passwd'])
+            cursor = db_connector.cursor(dictionary=True)
+            query = f"CREATE DATABASE IF NOT EXISTS {param['db_database']};"
+            cursor.execute(query)
+            db_connector.close()
+        except:
+            raise ConnectionError('DB init error')
 
     def db_create_table(self, connector):
         cursor = connector.cursor(dictionary=True)
