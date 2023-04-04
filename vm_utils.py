@@ -1,4 +1,5 @@
 import subprocess
+import re
 
 # process list를 조회하여 power on 상태의 vm list 조회
 def power_on_vm_list(server_list, server_pass) -> list:
@@ -71,14 +72,27 @@ def get_vm_id(server_list, server_pass):
     vm_list_dict = {}
     for server in server_list:
         ssh_server = "sshpass -p{} ssh root@{} ".format(server_pass, server)
-        vm_list = subprocess.check_output(ssh_server + "vim-cmd vmsvc/getallvms | grep -v Vmid | awk '{print $1, $2}'", shell=True).decode('utf-8')
+        # VM 이름에 띄어쓰기가 있는 경우 
+        vm_list = subprocess.check_output(ssh_server + "vim-cmd vmsvc/getallvms | grep -v Vmid", shell=True).decode('utf-8')
         vm_list = vm_list.split('\n')
         vm_list.remove('')
 
         #vmidx 와 name을 분리하고 server_ip 리스트로 딕셔너리 저장
-        for vm in vm_list:
-            vm_index_name = vm.split(' ')
-            vm_list_dict[vm_index_name[1]] = [vm_index_name[0], server]
+        for line in vm_list:
+            # 문자열에서 필요한 값을 추출합니다.
+            vm_line_list = line.split(' ')
+            vm_line_list = [x for x in vm_line_list if x != '']
+            match_index = 1
+
+            for list in vm_line_list:
+                if re.match(r"^\[", list):
+                    match_index = vm_line_list.index(list)
+                    break
+
+            value = vm_line_list[0]
+            subset_key = vm_line_list[1:match_index]
+            key = ' '.join(subset_key) + "-" + server.split('.')[-1]
+            vm_list_dict[key] = [value, server]
 
     return vm_list_dict
 

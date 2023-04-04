@@ -51,7 +51,7 @@ class MysqlController:
             server_disk_percentage TINYINT(1) UNSIGNED NOT NULL, 
             CONSTRAINT vm_server_PK PRIMARY KEY(server_ip));"""
             
-            create_list_table = """CREATE TABLE vm_list(vm_name VARCHAR(30), 
+            create_list_table = """CREATE TABLE vm_list(vm_name VARCHAR(100) COLLATE utf8_bin, 
             vm_idx VARCHAR(5) NOT NULL, 
             vm_use_memory INT(1) UNSIGNED NULL, 
             vm_use_cpu INT(1) UNSIGNED NULL, 
