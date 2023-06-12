@@ -64,7 +64,8 @@ def update_server_info(server_list, server_pass):
             server_memory_percentage = '{value['memory_percentage']}',
             server_disk_percentage = '{value['disk_percentage']}' where server_ip = '{server_ip}'"""
             db_controller.query_executor(query)
-            if value['memory_percentage'] > 90:
+
+            if int(value['memory_percentage']) > 90:
                 over_trigger = {'reason' : 'over_memory', 'server_ip': server_ip}
                 auto_stop(info['ignore_vm'],"", server_pass, over_trigger)
         else:
