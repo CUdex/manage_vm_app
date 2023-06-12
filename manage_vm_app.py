@@ -64,6 +64,9 @@ def update_server_info(server_list, server_pass):
             server_memory_percentage = '{value['memory_percentage']}',
             server_disk_percentage = '{value['disk_percentage']}' where server_ip = '{server_ip}'"""
             db_controller.query_executor(query)
+            if value['memory_percentage'] > 90:
+                over_trigger = {'reason' : 'over_memory', 'server_ip': server_ip}
+                auto_stop(info['ignore_vm'],"", server_pass, over_trigger)
         else:
             insert_data.append(f"('{server_ip}', '{value['cpu_percentage']}', '{value['memory_percentage']}', '{value['disk_percentage']}')")
 
@@ -92,15 +95,23 @@ def update_vm_status(server_pass):
 
         db_controller.query_executor(query)
     
-#app.conf에 설정된 limit_boot_time을 초과한 vm 종료
-def auto_stop(ignore_vm, limit_boot_time, server_pass):
-    query = f"select vm_name, vm_idx, vm_host_server from vm_list where vm_boot_time >= {limit_boot_time}"
+#app.conf에 설정된 limit_boot_time을 초과한 vm 종료, trigger에 따라 memory 혹은 booting time
+def auto_stop(ignore_vm, limit_boot_time, server_pass, trigger):
 
     ignore_list = ""
     for name in ignore_vm:
         ignore_list += f" and vm_name != '{name}'"
 
-    query = query + ignore_list
+    # vm server 메모리 사용량이 90%가 넘어가면 정지 예외 vm을 제외한 메모리 소비 top vm을 정지하기 위한 query
+    if trigger['reason'] == 'over_memory':
+        #stop 할 vm 수
+        number_of_stop_vm = 3
+        #vm 쿼리
+        query = f"select vm_name, vm_idx, vm_host_server from vm_list where vm_host_server = '{trigger['server_ip']}' {ignore_list} order by vm_use_memory desc limit {number_of_stop_vm}"        
+    else:
+        query = f"select vm_name, vm_idx, vm_host_server from vm_list where vm_boot_time >= {limit_boot_time}"
+        query = query + ignore_list
+    
     stop_list = db_controller.query_executor(query)
 
     for vm in stop_list:
@@ -109,19 +120,17 @@ def auto_stop(ignore_vm, limit_boot_time, server_pass):
 #main 시작 부분
 info = readAppInfo() 
 db_controller = MysqlController(info)
+main_trigger = {'reason': 'main'}
 
 while True:
     try:
         update_server_info(info['server_ip'], info['server_pass'][0])
         update_vm_idx(info['server_ip'], info['server_pass'][0])
         update_vm_status(info['server_pass'][0])
-        auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'][0])  
+        auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'][0], main_trigger)  
     except ConnectionError as e:
         print(f"error: {e.args[0]}") 
-    # except Exception as e:
-    #     print(f"error: {e.args[0]}")
 
     print("sleep start")
     time.sleep(180) 
     print("sleep end")
-

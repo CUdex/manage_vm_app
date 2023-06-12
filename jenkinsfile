@@ -1,0 +1,52 @@
+pipeline {
+  agent any
+  environment {
+    DOCKER_REGISTRY = "https://docker.io/cudex/manage_vm"
+    DOCKER_REPO_NAME = "cudex/manage_vm"
+  }
+  stages {
+     stage("Create BUILD_DATE") {
+      steps {
+        script {
+          def date = new Date()
+          def formattedDate = date.format("yyyyMMdd")
+          env.BUILD_DATE = formattedDate
+
+          APP_VERSION = "${env.DOCKER_REPO_NAME}:1.${env.BUILD_NUMBER}-${env.BUILD_DATE}"
+        }
+      }
+    }
+    stage("Build Docker Image") {
+      steps {
+        script {
+          def dockerImage = docker.build("${APP_VERSION}")
+        }
+      }
+    }
+
+    stage("Push Docker Image to Docker Hub") {
+      steps {
+        script {
+          docker.withRegistry("", "docker_credential") {
+            def dockerImage = docker.image("${APP_VERSION}")
+            dockerImage.push()
+          }
+        }
+      }
+    }
+
+    stage('Delete Docker image') {
+      steps {
+        sh "docker rmi -f ${APP_VERSION}"
+      }
+    }
+
+    stage('Save app Version') {
+      steps {
+        script {
+          writeFile(file: '/home/jenkins/APP_VERSION.txt', text: APP_VERSION)
+        }
+      }
+    }
+  }
+}
