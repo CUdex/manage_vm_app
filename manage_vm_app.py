@@ -1,34 +1,10 @@
 from mysql_lib import MysqlController
 import vm_utils
-import re
+import manage_lib
 import time
-
-#app.conf 파일에 있는 db정보를 가져오는 함수
-def readAppInfo() -> dict:
-    """
-    app.conf 파일에서 동작에 필요한 설정들을 가져온다.
-    """
-    app_info = {}
-    #정규식을 이용하여 필요한 정보만 dictionary array에 저장하기 위해 정규식 설정
-    db_match = re.compile('^db|^limit')
-    server_match = re.compile('^server|ignore')
-    f = open('/etc/app.conf')
-    readText = f.readlines()
-    f.close()
-
-    for line in readText:
-        #db나 boot의 경우 string으로 ignore, serverip는 list로 저장해야 함
-        if db_match.match(line):
-            split_text = line.split("=")
-            app_info[split_text[0]] = split_text[1].strip('\n')
-
-        elif server_match.match(line):
-            split_text = line.split("=")
-            server_ip = split_text[1].split(',')
-            app_info[split_text[0]] = server_ip
-            app_info[split_text[0]][-1] = app_info[split_text[0]][-1].strip('\n')
-
-    return app_info
+import log_config
+import threading
+import socket_server
 
 def update_vm_idx(server_list, server_pass):
     vm_list = vm_utils.get_vm_id(server_list, server_pass)
@@ -118,20 +94,26 @@ def auto_stop(ignore_vm, limit_boot_time, server_pass, trigger):
     for vm in stop_list:
         vm_utils.vm_stop(vm['vm_idx'], vm['vm_host_server'], server_pass)
 
-#main 시작 부분
-info = readAppInfo() 
+# main 시작 부분
+server_thread = threading.Thread(target=socket_server.start_server_in_thread)
+server_thread.start()
+# 로거 인스턴스 load
+custom_log = log_config.CustomLog()
+logger = custom_log.logger
+# 기타 설정에 필요한 정보 load
+info = manage_lib.readAppInfo() 
 db_controller = MysqlController(info)
 main_trigger = {'reason': 'main'}
 
 while True:
     try:
-        update_server_info(info['server_ip'], info['server_pass'][0])
-        update_vm_idx(info['server_ip'], info['server_pass'][0])
-        update_vm_status(info['server_pass'][0])
-        auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'][0], main_trigger)  
+        update_server_info(info['server_ip'], info['server_pass'])
+        update_vm_idx(info['server_ip'], info['server_pass'])
+        update_vm_status(info['server_pass'])
+        auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'], main_trigger)  
     except ConnectionError as e:
         print(f"error: {e.args[0]}") 
 
-    print("sleep start")
+    logger.info('sleep start')
     time.sleep(180) 
-    print("sleep end")
+    logger.info('sleep end')
