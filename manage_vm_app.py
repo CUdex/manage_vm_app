@@ -7,6 +7,7 @@ import threading
 import socket_server
 
 def update_vm_idx(server_list, server_pass):
+    logger.info('start update_vm_idx')
     vm_list = vm_utils.get_vm_id(server_list, server_pass)
     insert_query = "insert into vm_list(vm_name, vm_idx, vm_host_server) values"
     insert_data = []
@@ -28,6 +29,7 @@ def update_vm_idx(server_list, server_pass):
         db_controller.query_executor(insert_query)
 
 def update_server_info(server_list, server_pass):
+    logger.info('start update_server_info')
     server_status = vm_utils.vm_server_status(server_list, server_pass)
     insert_query = "insert into vm_server(server_ip, server_cpu_percentage, server_memory_percentage, server_disk_percentage) values"
     insert_data = []
@@ -53,6 +55,7 @@ def update_server_info(server_list, server_pass):
 
 #vm 상태 업데이트
 def update_vm_status(server_pass):
+    logger.info('start update_vm_status')
     query = "select vm_name, vm_idx, vm_host_server from vm_list"
     vm_list = db_controller.query_executor(query)
 
@@ -70,11 +73,12 @@ def update_vm_status(server_pass):
             vm_powered = {0 if vm_status['uptimeSeconds'] == '0' else 1} 
             where vm_name = '{vm['vm_name']}'"""
 
+        logger.info(f"update vm status: {vm_status}, server: {vm['vm_host_server']}, vm: {vm['vm_idx']}")
         db_controller.query_executor(query)
     
 #app.conf에 설정된 limit_boot_time을 초과한 vm 종료, trigger에 따라 memory 혹은 booting time
 def auto_stop(ignore_vm, limit_boot_time, server_pass, trigger):
-
+    logger.info('start auto_stop')
     ignore_list = ""
     for name in ignore_vm:
         ignore_list += f" and vm_name != '{name}'"
@@ -112,7 +116,7 @@ while True:
         update_vm_status(info['server_pass'])
         auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'], main_trigger)  
     except ConnectionError as e:
-        print(f"error: {e.args[0]}") 
+        print(f'error: {e.args[0]}') 
 
     logger.info('sleep start')
     time.sleep(180) 

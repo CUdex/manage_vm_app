@@ -15,14 +15,16 @@ def power_on_vm_list(server_list, server_pass) -> list:
 
     for server in server_list:
         try:
-            connect_server = "sshpass -p{} ssh root@{} ".format(server_pass, server)
-            vm_list = subprocess.check_output(connect_server + "esxcli vm process list | grep \"Display Name\" | awk -F': ' '{print $2}'", shell=True).decode('utf-8')
+            connect_server = ['sshpass', '-p',f'{server_pass}', 'ssh', '-o StrictHostKeyChecking=no', '-o ConnectTimeout=3', f'root@{server}']
+            get_vm_cmd = ["esxcli vm process list | grep \"Display Name\" | awk -F': ' '{print $2}'"]
+            vm_list = subprocess.check_output(connect_server + get_vm_cmd).decode('utf-8')
             list += vm_list.split('\n')
             list.remove('')
         except:
-            logger.error('fail update vm list')
-            raise ConnectionError(f'vm server connect error, you might check vm server ip-{server} or password')
-    logger.info('sucess update vm list')
+            error_message = 'fail update vm list'
+            logger.error(error_message)
+            raise ConnectionError(error_message)
+    logger.info('sucess get vm list')
     return list
 
 def vm_status(vm_id, server_ip, server_pass) -> dict:
@@ -31,13 +33,14 @@ def vm_status(vm_id, server_ip, server_pass) -> dict:
     """
     try:
         result_resource = {}
-        connect_server = "sshpass -p{} ssh root@{} ".format(server_pass, server_ip)
-        cli_command = "vim-cmd vmsvc/get.summary {} | grep -i -E 'uptimeseconds|overallcpuusage|committed|hostmemoryusage' | grep -iv uncommitted | sed -E 's/,| //g'".format(vm_id)
-        result_usage = subprocess.check_output(connect_server + cli_command, shell=True).decode('utf-8')
+        connect_server = ['sshpass', '-p',f'{server_pass}', 'ssh', '-o StrictHostKeyChecking=no', '-o ConnectTimeout=3', f'root@{server_ip}']
+        cli_command = [f"vim-cmd vmsvc/get.summary {vm_id} | grep -i -E 'uptimeseconds|overallcpuusage|committed|hostmemoryusage' | grep -iv uncommitted | sed -E 's/,| //g'"]
+        result_usage = subprocess.check_output(connect_server + cli_command).decode('utf-8')
         result_usage = result_usage.splitlines()
     except:
-        logger.error('fail update vm status')
-        raise ConnectionError()
+        error_message = 'fail get vm status'
+        logger.error(error_message)
+        raise ConnectionError(error_message)
 
     #해당 vm이 조회되지 않으면 빈 dict 반환
     if not result_usage:
@@ -60,19 +63,23 @@ def vm_server_status(server_list, server_pass):
 
     for server in server_list:
         try:
-            ssh_server = "sshpass -p{} ssh root@{} ".format(server_pass, server)
-            cpu_percentage = subprocess.check_output(ssh_server + "\"esxtop -n1 -b | awk -F',' '{print $6}' | tail -n 1 | sed 's/\"//g' | awk '{printf \"%d\", $1 * 100}'\"", shell=True).decode('utf-8')
-            print(f'CPU: {cpu_percentage}')
-            memory_percentage = subprocess.check_output(ssh_server + "\"vsish -e get /memory/comprehensive | grep -E \"Physical|Free\" | sed 's/ KB//g' | awk -F':' '{arr[i++]=$2} END {printf \"%d\", ((arr[0] - arr[1]) / arr[0] + 0.005) * 100}'\"", shell=True).decode('utf-8')
-            print(f'memory: {memory_percentage}')
-            disk_percentage = subprocess.check_output(ssh_server + "\"df | grep VMFS | awk '{max+=$2; use+=$3} END {printf \"%d\", (use / max + 0.005) * 100}'\"", shell=True).decode('utf-8')
-            print(f'DISK: {disk_percentage}')
+            ssh_server = ['sshpass', '-p',f'{server_pass}', 'ssh', '-o StrictHostKeyChecking=no', '-o ConnectTimeout=3', f'root@{server}']
+            
+            get_cpu_cmd = ["esxtop -n1 -b | awk -F',' '{print $6}' | tail -n 1 | sed 's/\"//g' | awk '{printf \"%d\", $1 * 100}'"]
+            cpu_percentage = subprocess.check_output(ssh_server + get_cpu_cmd).decode('utf-8')
+            
+            get_memory_cmd = ["vsish -e get /memory/comprehensive | grep -E \"Physical|Free\" | sed 's/ KB//g' | awk -F':' '{arr[i++]=$2} END {printf \"%d\", ((arr[0] - arr[1]) / arr[0] + 0.005) * 100}'"]
+            memory_percentage = subprocess.check_output(ssh_server + get_memory_cmd).decode('utf-8')
+            
+            get_disk_cmd = ["df | grep VMFS | awk '{max+=$2; use+=$3} END {printf \"%d\", (use / max + 0.005) * 100}'"]
+            disk_percentage = subprocess.check_output(ssh_server + get_disk_cmd).decode('utf-8')
 
             server_resource[server] = {"cpu_percentage": cpu_percentage, "memory_percentage": memory_percentage, "disk_percentage": disk_percentage}
         except:
-            logger.error('fail update server status')
-            raise ConnectionError()
-
+            error_message = 'fail get server status'
+            logger.error(error_message)
+            raise ConnectionError(error_message)
+    logger.info('suceess get server status')
     return server_resource
 
 def get_vm_id(server_list, server_pass):
@@ -81,9 +88,10 @@ def get_vm_id(server_list, server_pass):
     """
     vm_list_dict = {}
     for server in server_list:
-        ssh_server = "sshpass -p{} ssh root@{} ".format(server_pass, server)
-        # VM 이름에 띄어쓰기가 있는 경우 
-        vm_list = subprocess.check_output(ssh_server + "vim-cmd vmsvc/getallvms | grep -v Vmid", shell=True).decode('utf-8')
+        ssh_server = ['sshpass', '-p',f'{server_pass}', 'ssh', '-o StrictHostKeyChecking=no', '-o ConnectTimeout=3', f'root@{server}']
+        # VM 이름에 띄어쓰기가 있는 경우
+        get_vm_list_id_cmd = ["vim-cmd vmsvc/getallvms | grep -v Vmid"]
+        vm_list = subprocess.check_output(ssh_server + get_vm_list_id_cmd).decode('utf-8')
         vm_list = vm_list.split('\n')
         vm_list.remove('')
 
@@ -103,12 +111,15 @@ def get_vm_id(server_list, server_pass):
             subset_key = vm_line_list[1:match_index]
             key = ' '.join(subset_key) + "-" + server.split('.')[-1]
             vm_list_dict[key] = [value, server]
-
+    
+    logger.info('success get vm id list')
     return vm_list_dict
 
 def vm_stop(vm_idx, host_server, server_pass):
     try:
-        subprocess.run(f"sshpass -p{server_pass} ssh root@{host_server} vim-cmd vmsvc/power.off {vm_idx}",shell=True)
+        ssh_server = ['sshpass', '-p',f'{server_pass}', 'ssh', '-o StrictHostKeyChecking=no', '-o ConnectTimeout=3', f'root@{host_server}']
+        vm_stop_cmd = [f"vim-cmd vmsvc/power.off {vm_idx}"]
+        subprocess.run(ssh_server + vm_stop_cmd)
     except:
         logger.error('fail vm stop')
         raise ConnectionError()

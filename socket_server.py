@@ -9,11 +9,22 @@ import vm_utils
 custom_log = log_config.CustomLog()
 logger = custom_log.logger
 
-def vm_power_status_change(oper, server, vm_id):
+def vm_power_status_change(order):
     info = manage_lib.readAppInfo() 
     db_controller = MysqlController(info)
+    oper = order['oper']
+    server = order['server']
+    vm_id = order['vm_id']
 
-    query = f'update MANAGE_VM.vm_list set '
+    if oper == 'on':
+        query = f"update vm_list set vm_powered = 1 where vm_host_server = '{server}' and vm_idx = '{vm_id}'"
+    else:
+        query = f"update vm_list set vm_powered = 0 where vm_host_server = '{server}' and vm_idx = '{vm_id}'"
+
+    logger.info(f'query start: {query}')
+    db_controller.query_executor(query)
+    del db_controller
+
     
 async def handle_client(reader, writer):
     while True:
@@ -25,6 +36,7 @@ async def handle_client(reader, writer):
 
         try:
             oper_result = vm_utils.on_off_vm(order)
+            vm_power_status_change(order)
             logger.info(oper_result)
         except:
             logger.error(f"connection error: {order}")
@@ -37,11 +49,10 @@ async def handle_client(reader, writer):
 
 async def start_server():
     server = await asyncio.start_server(
-        handle_client, 'localhost', 8888)
+        handle_client, 'localhost', 20000)
 
     addr = server.sockets[0].getsockname()
     logger.info(f'Serving on {addr}')
-    print(f'Serving on {addr}')
 
     async with server:
         await server.serve_forever()
