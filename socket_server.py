@@ -49,7 +49,7 @@ async def handle_client(reader, writer):
 
 async def start_server():
     server = await asyncio.start_server(
-        handle_client, 'localhost', 20000)
+        handle_client, '0.0.0.0', 20000)
 
     addr = server.sockets[0].getsockname()
     logger.info(f'Serving on {addr}')
