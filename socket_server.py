@@ -19,7 +19,7 @@ def vm_power_status_change(order):
     if oper == 'on':
         query = f"update vm_list set vm_powered = 1 where vm_host_server = '{server}' and vm_idx = '{vm_id}'"
     else:
-        query = f"update vm_list set vm_powered = 0 where vm_host_server = '{server}' and vm_idx = '{vm_id}'"
+        query = f"update vm_list set vm_powered = 0, vm_boot_time = 0 where vm_host_server = '{server}' and vm_idx = '{vm_id}'"
 
     logger.info(f'query start: {query}')
     db_controller.query_executor(query)

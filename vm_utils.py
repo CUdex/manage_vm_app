@@ -142,7 +142,7 @@ def on_off_vm(order_info):
 
     if server_pass != pass_info:
         logger.error('password fail, please check your app.conf file')
-        return 'Invalid password, please check your app.conf file'
+        return 'fail to Invalid password, please check your app.conf file'
     
     try:
         logger.info('start connection to ESXI server')
