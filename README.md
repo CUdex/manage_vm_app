@@ -1,11 +1,12 @@
 ## VM 서버 관리용 app
 ### 모듈 설명
+
 ---
-*mysql_lib*: app들이 db 쿼리를 하기 위한 라이브러리 
-*manage_vm_app*: 주기적으로 vm 및 ESXi 서버 상태를 조회하여 db에 업데이트
-*vm_utils*: vm 정보 조회에 사용되는 라이브러리
-*socket_server*: manage web에서 on/off 명령을 받아 ESXi 서버에 on/off 동작 수행
-*log_config*: 로그를 남기기 위한 로그 인스턴스 생성 클래스 (singleton 패턴)
+#### *mysql_lib*: app들이 db 쿼리를 하기 위한 라이브러리
+#### *manage_vm_app*: 주기적으로 vm 및 ESXi 서버 상태를 조회하여 db에 업데이트
+#### *vm_utils*: vm 정보 조회에 사용되는 라이브러리
+#### *socket_server*: manage web에서 on/off 명령을 받아 ESXi 서버에 on/off 동작 수행
+#### *log_config*: 로그를 남기기 위한 로그 인스턴스 생성 클래스 (singleton 패턴)
 ---
 #### 주요 패치
 1) vm name 분류 추가
