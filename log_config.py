@@ -18,7 +18,7 @@ class CustomLog:
             self.logger.setLevel(logging.DEBUG)
             
             log_file_path = '/var/log/manager_log/on_off_vm.log'
-            max_log_size_bytes = 1024 * 1024 * 1024 # 100 MB
+            max_log_size_bytes = 1024 * 1024 * 100 # 100 MB
             rotating_handler = RotatingFileHandler(log_file_path, maxBytes=max_log_size_bytes, backupCount=5, mode='a')
             formatter = logging.Formatter('%(asctime)s | %(module)s | %(levelname)s | %(message)s')
             rotating_handler.setFormatter(formatter)

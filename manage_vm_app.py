@@ -119,5 +119,5 @@ while True:
         print(f'error: {e.args[0]}') 
 
     logger.info('sleep start')
-    time.sleep(180) 
+    time.sleep(60) 
     logger.info('sleep end')
