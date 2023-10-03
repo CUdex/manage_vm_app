@@ -2,7 +2,7 @@ FROM python:3.7.15-alpine3.17
 
 MAINTAINER cuyu9779 <cuyu9779@gmail.com>
 RUN apk add openssh sshpass
-RUN pip install mysql-connector-python asyncio
+RUN pip install mysql-connector-python asyncio influxdb-client[ciso]
 RUN mkdir /usr/manage_vm
 RUN sed -i 's/#   StrictHostKeyChecking ask/StrictHostKeyChecking no/g' /etc/ssh/ssh_config
 
