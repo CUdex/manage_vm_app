@@ -48,27 +48,10 @@ class InfluxdbController:
         # influxdb에 데이터 저장
         point = Point('server_values') \
             .tag(key='server_ip',value=server_ip) \
-            .field('cpu', data['cpu']) \
-            .field('memory', data['memory']) \
-            .field('disk', data['disk'])
+            .field('cpu', data['cpu_percentage']) \
+            .field('memory', data['memory_percentage']) \
+            .field('disk', data['disk_percentage'])
         
         write_api = self.client.write_api()
         write_api.write(bucket=self.bucket_name, org=self.org, record=point)
         write_api.close()
-
-if __name__ == '__main__':
-    # InfluxDB 연결 설정
-    param = {
-        'url': 'http://localhost:8086',  # InfluxDB 호스트 주소
-        'token': 'token123', 
-        'org': 'my-org',
-         # 데이터베이스와 측정값 정보
-        'bucket_name': 'server_status'
-    }
-
-    flux_client = InfluxdbController(param)
-    flux_client.check_init()
-    server_ip = '172.29.40.203'
-    data = {'cpu': 10, 'memory': 20, 'disk': 100000}
-    flux_client.write_data(server_ip, data)
-    del flux_client

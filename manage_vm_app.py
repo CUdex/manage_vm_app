@@ -56,6 +56,9 @@ def update_server_info(server_list, server_pass):
         if not db_controller.query_executor(check_db_server):
             insert_data.append(f"('{server_ip}', '{value['cpu_percentage']}', '{value['memory_percentage']}', '{value['disk_percentage']}')")
 
+        #tsdb인 influxdb에 데이터 저장
+        influxdb_controller.write_data(server_ip, value)
+
     if insert_data:
         insert_query = insert_query + ",".join(insert_data)
         db_controller.query_executor(insert_query)
@@ -117,9 +120,18 @@ custom_log = log_config.CustomLog()
 logger = custom_log.logger
 # 기타 설정에 필요한 정보 load
 info = manage_lib.readAppInfo() 
-db_controller = MysqlController(info)
 main_trigger = {'reason': 'main'}
-influxdb_controller = tsdb_lib.InfluxdbController(info)
+
+#db 연결
+while True:
+    try:
+        db_controller = MysqlController(info)
+        influxdb_controller = tsdb_lib.InfluxdbController(info)
+        influxdb_controller.check_init()
+        break
+    except Exception as e:
+        logger.error('db connect error')
+        print(f'db connect error: {e}')
 
 while True:
     try:
