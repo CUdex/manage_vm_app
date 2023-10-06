@@ -5,6 +5,7 @@ import time
 import log_config
 import threading
 import socket_server
+import tsdb_lib
 
 def update_vm_idx(server_list, server_pass):
     logger.info('start update_vm_idx')
@@ -37,21 +38,34 @@ def update_server_info(server_list, server_pass):
     for server_ip, value in server_status.items():
         check_db_server = f"select 1 from vm_server where server_ip = '{server_ip}'"
 
-        if db_controller.query_executor(check_db_server):
-            query = f"""update vm_server set server_cpu_percentage = '{value['cpu_percentage']}', 
-            server_memory_percentage = '{value['memory_percentage']}',
-            server_disk_percentage = '{value['disk_percentage']}' where server_ip = '{server_ip}'"""
-            db_controller.query_executor(query)
+        # 시계열 데이터로 모니터링 db 변경으로 server status 체크 변경
+        # if db_controller.query_executor(check_db_server):
+        #     query = f"""update vm_server set server_cpu_percentage = '{value['cpu_percentage']}', 
+        #     server_memory_percentage = '{value['memory_percentage']}',
+        #     server_disk_percentage = '{value['disk_percentage']}' where server_ip = '{server_ip}'"""
+        #     db_controller.query_executor(query)
 
-            if int(value['memory_percentage']) > 90:
-                over_trigger = {'reason' : 'over_memory', 'server_ip': server_ip}
-                auto_stop(info['ignore_vm'],"", server_pass, over_trigger)
-        else:
+        #     if int(value['memory_percentage']) > 90:
+        #         over_trigger = {'reason' : 'over_memory', 'server_ip': server_ip}
+        #         auto_stop(info['ignore_vm'],"", server_pass, over_trigger)
+        # else:
+        #     insert_data.append(f"('{server_ip}', '{value['cpu_percentage']}', '{value['memory_percentage']}', '{value['disk_percentage']}')")
+        # mysql에는 주기적으로 update 할 필요가 없어짐
+
+        # 외래키로 인하여 db 서버 리스트에 서버 등록이 반드시 필요
+        if not db_controller.query_executor(check_db_server):
             insert_data.append(f"('{server_ip}', '{value['cpu_percentage']}', '{value['memory_percentage']}', '{value['disk_percentage']}')")
+
+        #tsdb인 influxdb에 데이터 저장
+        influxdb_controller.write_data(server_ip, value)
 
     if insert_data:
         insert_query = insert_query + ",".join(insert_data)
         db_controller.query_executor(insert_query)
+
+    if int(value['memory_percentage']) > 90:
+        over_trigger = {'reason' : 'over_memory', 'server_ip': server_ip}
+        auto_stop(info['ignore_vm'],"", server_pass, over_trigger)
 
 #vm 상태 업데이트
 def update_vm_status(server_pass):
@@ -106,8 +120,18 @@ custom_log = log_config.CustomLog()
 logger = custom_log.logger
 # 기타 설정에 필요한 정보 load
 info = manage_lib.readAppInfo() 
-db_controller = MysqlController(info)
 main_trigger = {'reason': 'main'}
+
+#db 연결
+while True:
+    try:
+        db_controller = MysqlController(info)
+        influxdb_controller = tsdb_lib.InfluxdbController(info)
+        influxdb_controller.check_init()
+        break
+    except Exception as e:
+        logger.error('db connect error')
+        print(f'db connect error: {e}')
 
 while True:
     try:
@@ -115,7 +139,7 @@ while True:
         update_vm_idx(info['server_ip'], info['server_pass'])
         update_vm_status(info['server_pass'])
         auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'], main_trigger)  
-    except ConnectionError as e:
+    except Exception as e:
         print(f'error: {e.args[0]}') 
 
     logger.info('sleep start')
