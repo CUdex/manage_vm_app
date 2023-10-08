@@ -7,7 +7,7 @@ def readAppInfo() -> dict:
     """
     app_info = {}
     #정규식을 이용하여 list와 strig 저장 방식 구분
-    server_match = re.compile('^server|^ignore')
+    server_match = re.compile('^server_ip|^ignore')
     annotation_match = re.compile('^(#|[^=]*$)')
     f = open('/etc/app.conf')
     readText = f.readlines()
