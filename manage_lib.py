@@ -8,18 +8,20 @@ def readAppInfo() -> dict:
     app_info = {}
     #정규식을 이용하여 list와 strig 저장 방식 구분
     server_match = re.compile('^server|^ignore')
+    annotation_match = re.compile('^(#|[^=]*$)')
     f = open('/etc/app.conf')
     readText = f.readlines()
     f.close()
 
     for line in readText:
-        # ignore, serverip는 list로 저장해야 함, 그 외의 경우 string 저장
-        if server_match.match(line):
+        # ignore, serverip는 list로 저장해야 함, 그 외의 경우 string 저장 및 주석 예외
+        if annotation_match(line):
+            pass
+        elif server_match.match(line):
             split_text = line.split("=")
             server_info = split_text[1].split(',')
             app_info[split_text[0]] = server_info
             app_info[split_text[0]][-1] = app_info[split_text[0]][-1].strip('\n') # 끝의 개행 제거
-
         else:
             split_text = line.split("=")
             app_info[split_text[0]] = split_text[1].strip('\n')

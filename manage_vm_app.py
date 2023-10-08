@@ -130,8 +130,7 @@ while True:
         influxdb_controller.check_init()
         break
     except Exception as e:
-        logger.error('db connect error')
-        print(f'db connect error: {e}')
+        logger.error(f'db connect error {e}')
 
 while True:
     try:
@@ -140,7 +139,7 @@ while True:
         update_vm_status(info['server_pass'])
         auto_stop(info['ignore_vm'],info['limit_boot_time'], info['server_pass'], main_trigger)  
     except Exception as e:
-        print(f'error: {e.args[0]}') 
+        logger.error(f'status update error: {e}')
 
     logger.info('sleep start')
     time.sleep(60) 
