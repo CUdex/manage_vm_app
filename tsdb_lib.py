@@ -48,9 +48,9 @@ class InfluxdbController:
         # influxdb에 데이터 저장
         point = Point('server_values') \
             .tag(key='server_ip',value=server_ip) \
-            .field('cpu', data['cpu_percentage']) \
-            .field('memory', data['memory_percentage']) \
-            .field('disk', data['disk_percentage'])
+            .field('cpu', int(data['cpu_percentage'])) \
+            .field('memory', int(data['memory_percentage'])) \
+            .field('disk', int(data['disk_percentage']))
         
         write_api = self.client.write_api()
         write_api.write(bucket=self.bucket_name, org=self.org, record=point)
