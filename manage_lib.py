@@ -15,7 +15,7 @@ def readAppInfo() -> dict:
 
     for line in readText:
         # ignore, serverip는 list로 저장해야 함, 그 외의 경우 string 저장 및 주석 예외
-        if annotation_match(line):
+        if annotation_match.match(line):
             pass
         elif server_match.match(line):
             split_text = line.split("=")
