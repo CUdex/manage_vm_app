@@ -59,13 +59,14 @@ def update_server_info(server_list, server_pass):
         #tsdb인 influxdb에 데이터 저장
         influxdb_controller.write_data(server_ip, value)
 
+        #메모리 사용량 90% 넘으면 사용량이 많은 vm부터 중지
+        if int(value['memory_percentage']) > 90:
+            over_trigger = {'reason' : 'over_memory', 'server_ip': server_ip}
+            auto_stop(info['ignore_vm'],"", server_pass, over_trigger)
+
     if insert_data:
         insert_query = insert_query + ",".join(insert_data)
         db_controller.query_executor(insert_query)
-
-    if int(value['memory_percentage']) > 90:
-        over_trigger = {'reason' : 'over_memory', 'server_ip': server_ip}
-        auto_stop(info['ignore_vm'],"", server_pass, over_trigger)
 
 #vm 상태 업데이트
 def update_vm_status(server_pass):
@@ -92,22 +93,24 @@ def update_vm_status(server_pass):
     
 #app.conf에 설정된 limit_boot_time을 초과한 vm 종료, trigger에 따라 memory 혹은 booting time
 def auto_stop(ignore_vm, limit_boot_time, server_pass, trigger):
-    logger.info('start auto_stop')
     ignore_list = ""
     for name in ignore_vm:
         ignore_list += f" and vm_name != '{name}'"
 
     # vm server 메모리 사용량이 90%가 넘어가면 정지 예외 vm을 제외한 메모리 소비 top vm을 정지하기 위한 query
     if trigger['reason'] == 'over_memory':
+        logger.info('start auto_stop reason - over memory')
         #stop 할 vm 수
         number_of_stop_vm = 3
         #vm 쿼리
         query = f"select vm_name, vm_idx, vm_host_server from vm_list where vm_host_server = '{trigger['server_ip']}' {ignore_list} order by vm_use_memory desc limit {number_of_stop_vm}"        
     else:
+        logger.info('start auto_stop reason - boot time over')
         query = f"select vm_name, vm_idx, vm_host_server from vm_list where vm_boot_time >= {limit_boot_time}"
         query = query + ignore_list
     
     stop_list = db_controller.query_executor(query)
+    logger.info(f'auto_stop list - {stop_list}')
 
     for vm in stop_list:
         vm_utils.vm_stop(vm['vm_idx'], vm['vm_host_server'], server_pass)
